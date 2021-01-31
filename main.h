@@ -11,6 +11,7 @@ extern int debug_val;
 
 // void fill_scanline(int addr, int num, int col);
 void plot_pixel(u16* addr, int col);
+void fast_clear(u16* vid_addr);
 int fastrandom();
 
 #endif

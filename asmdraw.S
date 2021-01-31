@@ -1,20 +1,7 @@
 .arch armv4t
 
 .section .iwram, "ax", %progbits
-.align 2
-
-; @ r0 - start address
-; @ r1 - num of pixels
-; @ r2 - color
-; .global fill_scanline
-; fill_scanline:
-
-;     .loop:
-;         str r2, [r0], #4
-;         subs r1, #4
-;         bne .loop
-
-;     bx lr
+.align 4
 
 @ r0 - addr
 @ r1 - col
@@ -35,4 +22,71 @@ plot_pixel:
     .done:
 
     strh r2, [r0]
+    bx lr
+
+@ takes 20k cycles
+@ r0 - vid addr start
+.global fast_clear
+fast_clear:
+    push {r4-r12}
+    push {r14}
+    mov r1, #0
+    mov r2, #0
+    mov r3, #0
+    mov r4, #0
+    mov r5, #0
+    mov r6, #0
+    mov r7, #0
+    mov r8, #0
+    mov r9, #0
+    mov r10, #0
+    mov r11, #0
+    mov r12, #0
+    mov r14, #0x14
+    1:
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        stmia r0!, {r1-r12}
+        subs r14, #1
+        bne 1b
+    
+    pop {r14}
+    pop {r4-r12}
     bx lr

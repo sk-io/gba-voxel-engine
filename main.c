@@ -14,6 +14,7 @@ int display_frame = 0;
 int input;
 u16* vid_addr;
 int debug_val;
+int frame_counter = 0;
 
 IWRAM_CODE void profile(int col) {
     int current_line = REG_VCOUNT;
@@ -24,33 +25,42 @@ IWRAM_CODE static void draw_crosshair() {
     plot_pixel(vid_addr + 120 * 160 / 2 + 60, 1);
 }
 
+// 173k cycles
 IWRAM_CODE static void clear_screen() {
     for (int i = 0; i < 240 * 160 / 2; i++) {
         *(vid_addr + i) = 0x0000;
     }
 }
 
+IWRAM_CODE static void interrupt() {
+    REG_IF = IRQ_VBLANK;
+    frame_counter++;
+}
+
 IWRAM_CODE int main() {
     const int vidmode = MODE_4 | BG2_ON;
     REG_DISPCNT = vidmode;
 
-    *(BG_PALETTE + 1) = RGB5(15, 5, 20);
+    *(BG_PALETTE + 1) = RGB5(31, 5, 5);
     *(BG_PALETTE + 2) = RGB8(0x9b, 0xad, 0xb7);
     *(BG_PALETTE + 3) = RGB8(0x84, 0x7e, 0x87);
 
     init_palette();
     
     int x, y;
-    int frame = 0;
+    int frames = 0;
 
     init_blockmap();
 
-    // REG_IME = 1;
-    // REG_IE |= IRQ_VBLANK;
-    // REG_
+    INT_VECTOR = (IntFn) interrupt;
+    REG_DISPSTAT |= LCDC_VBL;
+    REG_IE |= IRQ_VBLANK;
+    REG_IME = 1;
 
     while (1) {
         while(REG_VCOUNT != 0);
+        frames = frame_counter;
+        frame_counter = 0;
 
         REG_DISPCNT = vidmode | (display_frame ? BIT(4) : 0);
         vid_addr = (u16*) (0x06000000 + (display_frame ? 0 : 0xA000));
@@ -72,7 +82,8 @@ IWRAM_CODE int main() {
 
         player_update();
 
-        //clear_screen(); // cpuopt
+        //clear_screen();
+        fast_clear(vid_addr);
         //profile(3);
         traverse_blocks();
         //profile(4);
@@ -84,9 +95,12 @@ IWRAM_CODE int main() {
 
         draw_crosshair();
 
-        frame++;
+        for (int i = 0; i < frames; i++) {
+            *(vid_addr + 120 * 8 + 4 + i * 2) = 0x0101;
+            *(vid_addr + 120 * 9 + 4 + i * 2) = 0x0101;
+        }
+
         display_frame ^= 1;
-        
     }
 }
 

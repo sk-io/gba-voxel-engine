@@ -107,6 +107,7 @@ IWRAM_CODE void sort_and_fill_tri(vec2_t *v0, vec2_t *v1, vec2_t *v2, int col) {
             swap(&v0, &v1);
         }
     } else {
+        // crap attempt at filling the pixel gaps
         const int extra = 4096;
         v0->y -= extra;
         v2->y += extra;
@@ -128,13 +129,3 @@ IWRAM_CODE void sort_and_fill_tri(vec2_t *v0, vec2_t *v1, vec2_t *v2, int col) {
     // plot_pixel(vid_addr + ((x[p1] >> 12) >> 1) + (y[p1] >> 12) * 120, 2);
     // plot_pixel(vid_addr + ((x[p2] >> 12) >> 1) + (y[p2] >> 12) * 120, 3);
 }
-
-// void draw() {
-//     int x[3] = {
-//         50 << FP_SHIFT, 20 << FP_SHIFT, 100 << FP_SHIFT
-//     };
-//     int y[3] = {
-//         20 << FP_SHIFT, 45 << FP_SHIFT, 60 << FP_SHIFT
-//     };
-//     sort_and_fill_tri(x, y, display_frame + 1);
-// }

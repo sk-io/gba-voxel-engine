@@ -51,41 +51,41 @@ void player_update() {
     vec3_t next_pos;
     vec3_t move = {0, 0, 0};
 
-    if ((input & KEY_R)) { // walking
+    if (!(input & KEY_R)) { // walking
 
-        if (!(input & KEY_UP)) {
+        if (input & KEY_UP) {
             move.z += move_speed;
         }
-        if (!(input & KEY_DOWN)) {
+        if (input & KEY_DOWN) {
             move.z -= move_speed;
         }
-        if (!(input & KEY_LEFT)) {
+        if (input & KEY_LEFT) {
             move.x -= move_speed;
         }
-        if (!(input & KEY_RIGHT)) {
+        if (input & KEY_RIGHT) {
             move.x += move_speed;
         }
-        if (!(input & KEY_A)) {
+        if (input & KEY_A) {
             //move.y -= move_speed;
             player_vel.y = -600;
         }
-        if (!(input & KEY_SELECT)) {
+        if (input & KEY_SELECT) {
             //move.y -= move_speed;
         }
-        if (!(input & KEY_START)) {
+        if (input & KEY_START) {
             //move.y += move_speed;
         }
     } else { // looking
-        if (!(input & KEY_LEFT)) {
+        if (input & KEY_LEFT) {
             cam_rot.y -= turn_speed;
         }
-        if (!(input & KEY_RIGHT)) {
+        if (input & KEY_RIGHT) {
             cam_rot.y += turn_speed;
         }
-        if (!(input & KEY_UP)) {
+        if (input & KEY_UP) {
             cam_rot.x += turn_speed;
         }
-        if (!(input & KEY_DOWN)) {
+        if (input & KEY_DOWN) {
             cam_rot.x -= turn_speed;
         }
 
@@ -125,9 +125,7 @@ void player_update() {
     cam_pos.y = player_pos.y - cam_y_offset;
     cam_pos.z = player_pos.z;
 
-    int next = !(input & KEY_B);
-    static int holding_b = 0;
-    if (!holding_b && next) {
+    if (input & input_delta & KEY_B) {
         raycast();
         if (raycast_result.found) {
             blockpos_t pos = raycast_result.pos;
@@ -135,5 +133,4 @@ void player_update() {
             blockmap[BLOCK_INDEX(pos)] = 2;
         }
     }
-    holding_b = next;
 }

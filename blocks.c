@@ -49,12 +49,13 @@ typedef struct {
     byte dir;
 } facepos_t;
 
+// obviously po2
 #define RENDERLIST_SIZE 256
 static int renderlist_count;
 static facepos_t renderlist[RENDERLIST_SIZE];
 
-byte blockmap[BMAP_X * BMAP_Y * BMAP_Z];
-static byte visited[BMAP_X * BMAP_Y * BMAP_Z]; // memopt: single bit
+EWRAM_BSS byte blockmap[BMAP_X * BMAP_Y * BMAP_Z];
+static byte visited[BMAP_X * BMAP_Y * BMAP_Z]; // todo: bitfield
 
 bool freeze_traversal = 0;
 static blockpos_t cam_block_pos;
@@ -63,7 +64,8 @@ static blockpos_t cam_block_pos;
 #define VQUEUE_CAP 256
 static blockpos_t vqueue[VQUEUE_CAP];
 static short vqueue_start, vqueue_end, vqueue_count;
-static int v_depth;
+static int num_blocks_traversed;
+int block_traversal_limit;
 
 static inline void set_block(blockpos_t p, byte b) {
     blockmap[BLOCK_INDEX(p)] = 1;
@@ -109,7 +111,7 @@ void init_palette() {
     *(BG_PALETTE + 9) = RGB5(14, 14, 14); // stone darkside2
 
     *(BG_PALETTE + 10) = RGB5(11, 11, 11); // stone bottom1
-    *(BG_PALETTE + 11) = RGB5(10, 10, 10); // stone bottom1
+    *(BG_PALETTE + 11) = RGB5(10, 10, 10); // stone bottom2
 
     // -- dirt
     *(BG_PALETTE + 12) = RGB5(15, 9, 7); // dirt top1
@@ -122,7 +124,7 @@ void init_palette() {
     *(BG_PALETTE + 17) = RGB5(10, 4, 4); // dirt darkside2
 
     *(BG_PALETTE + 18) = RGB5(8, 3, 2); // dirt bottom1
-    *(BG_PALETTE + 19) = RGB5(7, 2, 2); // dirt bottom1
+    *(BG_PALETTE + 19) = RGB5(7, 2, 2); // dirt bottom2
 }
 
 static IWRAM_CODE void draw_face(const vec3_t* offset, const int face, const byte block) {
@@ -142,7 +144,6 @@ static IWRAM_CODE void draw_face(const vec3_t* offset, const int face, const byt
         persp_div(p + i, &v);
     }
 
-    //byte col = block << 1;
     byte col1 = block_color1[block][face];
     byte col2 = col1 + 1;
 
@@ -180,6 +181,7 @@ IWRAM_CODE inline static bool is_in_bounds(const blockpos_t* pos) {
     return true;
 }
 
+// backface culling is fast cause all the faces are axis aligned
 IWRAM_CODE inline static bool is_face_visible(const blockpos_t* pos, const int dir) {
     if (dir == 0) if (cam_block_pos.z >= pos->z) return false;
     if (dir == 1) if (cam_block_pos.x <= pos->x) return false;
@@ -221,6 +223,7 @@ IWRAM_CODE static void check_adj(blockpos_t* origin, int dir) {
         return;
     
     if (0) {
+        // prevent going backwards, doesn't work
         blockpos_t vdir = {0, 0, 0};
         increment_pos(&vdir, dir);
 
@@ -230,7 +233,9 @@ IWRAM_CODE static void check_adj(blockpos_t* origin, int dir) {
             return;
     }
 
-    if (v_depth > 2) {
+    if (num_blocks_traversed > 5) {
+        // jank frustum culling: just project the centers of the blocks and see if they're on screen.
+        // cheaper than creating an actual frustum and whatnot
         vec3_t center = {
             TO_FP(pos.x) + 2048,
             TO_FP(pos.y) + 2048,
@@ -240,6 +245,19 @@ IWRAM_CODE static void check_adj(blockpos_t* origin, int dir) {
         transform(&center, &center);
 
         if (center.z < 1000)
+            return;
+        
+        vec2_t scr;
+        persp_div(&scr, &center);
+
+        const int margin = TO_FP(80);
+        if (scr.x < -margin)
+            return;
+        if (scr.y < -margin)
+            return;
+        if (scr.x > TO_FP(SCREEN_WIDTH) + margin)
+            return;
+        if (scr.y > TO_FP(SCREEN_HEIGHT) + margin)
             return;
     }
 
@@ -269,7 +287,7 @@ IWRAM_CODE void traverse_blocks() {
         visited[i] = 0;
     renderlist_count = 0;
     vqueue_clear();
-    v_depth = 0;
+    num_blocks_traversed = 0;
 
     cam_block_pos.x = cam_pos.x >> 12;
     cam_block_pos.y = cam_pos.y >> 12;
@@ -296,16 +314,13 @@ IWRAM_CODE void traverse_blocks() {
         check_adj(p, 4);
         check_adj(p, 5);
 
-        v_depth++;
+        if (num_blocks_traversed++ == block_traversal_limit) return;
+        if (renderlist_count == RENDERLIST_SIZE - 1) return;
     }
 }
 
 IWRAM_CODE void draw_blocks() {
-    // vec3_t p = {TO_FP(0), TO_FP(0), TO_FP(2)};
-    // draw_face(&p, 0);
-
-    // plot_pixel(vid_addr + 120 * 8 + (renderlist_count), 2);
-
+    // draw faces back to front
     for (int i = renderlist_count - 1; i >= 0; i--) {
         const facepos_t* t = renderlist + i;
         vec3_t p = {TO_FP(t->pos.x), TO_FP(t->pos.y), TO_FP(t->pos.z)};

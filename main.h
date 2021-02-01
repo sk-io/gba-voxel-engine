@@ -5,7 +5,7 @@
 
 
 extern int display_frame;
-extern int input;
+extern int input, input_delta;
 extern u16* vid_addr;
 extern int debug_val;
 

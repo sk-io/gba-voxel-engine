@@ -11,10 +11,15 @@
 #include "player.h"
 
 int display_frame = 0;
-int input;
+int input, input_delta;
 u16* vid_addr;
 int debug_val;
 int frame_counter = 0;
+
+static const int render_dists[] = {
+    32, 64, 128, 256, 512
+};
+static int render_dist_i = 2;
 
 IWRAM_CODE void profile(int col) {
     int current_line = REG_VCOUNT;
@@ -49,6 +54,7 @@ IWRAM_CODE int main() {
     
     int x, y;
     int frames = 0;
+    int prev_input = 0;
 
     init_blockmap();
 
@@ -56,6 +62,8 @@ IWRAM_CODE int main() {
     REG_DISPSTAT |= LCDC_VBL;
     REG_IE |= IRQ_VBLANK;
     REG_IME = 1;
+
+    block_traversal_limit = render_dists[render_dist_i];
 
     while (1) {
         while(REG_VCOUNT != 0);
@@ -65,14 +73,19 @@ IWRAM_CODE int main() {
         REG_DISPCNT = vidmode | (display_frame ? BIT(4) : 0);
         vid_addr = (u16*) (0x06000000 + (display_frame ? 0 : 0xA000));
 
-        input = REG_KEYINPUT;
+        input = ~REG_KEYINPUT;
+        input_delta = prev_input ^ input;
+        prev_input = input;
 
-        int next = !(input & KEY_SELECT);
-        static int holding_sel = 0;
-        if (!holding_sel && next) {
+        if (input & input_delta & KEY_SELECT) {
             freeze_traversal ^= 1;
         }
-        holding_sel = next;
+        if (input & input_delta & KEY_L) {
+            if (++render_dist_i == (sizeof(render_dists) / sizeof(int)))
+                render_dist_i = 0;
+            
+            block_traversal_limit = render_dists[render_dist_i];
+        }
 
         // cam_x_sin = fastsin(cam_rot.x);
         // cam_x_cos = fastcos(cam_rot.x);

@@ -29,8 +29,8 @@ static IWRAM_CODE void fill_tri(int x0, int y0, int x1, int y1, int x2, int y2, 
 
     int slopes[3];
 
-    int flat_top = y1 - y0 == 0;
-    int flat_bot = y1 - y2 == 0;
+    int flat_top = ABS(y1 - y0) < 4096 * 2;
+    int flat_bot = ABS(y1 - y2) < 4096 * 2;
 
     const int div_shift = 8;
 
@@ -73,6 +73,9 @@ static IWRAM_CODE void fill_tri(int x0, int y0, int x1, int y1, int x2, int y2, 
             fill_scanline(((int)vid_addr + ty + lx0), (lx1 - lx0) >> 1, col | (col << 8));
         }
 
+        left_acc += slopes[left_side];
+        right_acc += slopes[left_side ^ 1];
+
         if (y == mid_y) {
             slopes[1] = slopes[2];
 
@@ -82,8 +85,6 @@ static IWRAM_CODE void fill_tri(int x0, int y0, int x1, int y1, int x2, int y2, 
                 right_acc = x1;
         }
 
-        left_acc += slopes[left_side];
-        right_acc += slopes[left_side ^ 1];
     }
 }
 
@@ -102,16 +103,17 @@ IWRAM_CODE void sort_and_fill_tri(vec2_t *v0, vec2_t *v1, vec2_t *v2, int col) {
         swap(&v1, &v2);
     
     if (ABS(v0->y - v1->y) < 4096 * 2) {
-        v0->y = v1->y;
+        v1->y = v0->y;
         if (v0->x > v1->x) {
             swap(&v0, &v1);
         }
-    } else {
-        // crap attempt at filling the pixel gaps
-        const int extra = 4096;
-        v0->y -= extra;
-        v2->y += extra;
     }
+    // else {
+    //     // crap attempt at filling the pixel gaps
+    //     // const int extra = 4096;
+    //     // v0->y -= extra;
+    //     // v2->y += extra;
+    // }
 
     if (ABS(v1->y - v2->y) < 4096 * 2) {
         v1->y = v2->y;
@@ -129,3 +131,48 @@ IWRAM_CODE void sort_and_fill_tri(vec2_t *v0, vec2_t *v1, vec2_t *v2, int col) {
     // plot_pixel(vid_addr + ((x[p1] >> 12) >> 1) + (y[p1] >> 12) * 120, 2);
     // plot_pixel(vid_addr + ((x[p2] >> 12) >> 1) + (y[p2] >> 12) * 120, 3);
 }
+
+// IWRAM_CODE void sort_and_fill_tri_2(vec2_t *v0_, vec2_t *v1_, vec2_t *v2_, int col) {
+//     if (v0_->y > v2_->y)
+//         swap(&v0_, &v2_);
+//     if (v0_->y > v1_->y)
+//         swap(&v0_, &v1_);
+//     if (v1_->y > v2_->y)
+//         swap(&v1_, &v2_);
+
+//     vec2_t v0 = *v0_;
+//     vec2_t v1 = *v1_;
+//     vec2_t v2 = *v2_;
+    
+//     if (ABS(v0.y - v1.y) < 4096 * 2) {
+//         v1.y = v0.y;
+//         if (v0.x > v1.x) {
+//             //swap(&v0, &v1);
+//             vec2_t tmp = v0;
+//             v0 = v1;
+//             v1 = tmp;
+//         }
+//     }
+//     // else {
+//     //     // crap attempt at filling the pixel gaps
+//     //     // const int extra = 4096;
+//     //     // v0.y -= extra;
+//     //     // v2.y += extra;
+//     // }
+
+//     if (ABS(v1.y - v2.y) < 4096 * 2) {
+//         v1.y = v2.y;
+//         if (v1.x > v2.x) {
+//             //swap(&v1, &v2);
+//             vec2_t tmp = v1;
+//             v1 = v2;
+//             v2 = tmp;
+//         }
+//     }
+
+//     fill_tri(
+//         v0.x, v0.y,
+//         v1.x, v1.y,
+//         v2.x, v2.y, col);
+
+// }

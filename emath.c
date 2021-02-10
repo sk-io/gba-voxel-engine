@@ -39,8 +39,9 @@ IWRAM_CODE inline void transform(vec3_t* o, const vec3_t *i) {
 }
 
 IWRAM_CODE inline void persp_div(vec2_t* scr, vec3_t *i) {
-    i->x = fastdiv(i->x, i->z);
-    i->y = fastdiv(i->y, i->z);
+    const int shift = 1;
+    i->x = fastdiv(i->x << shift, i->z << shift);
+    i->y = fastdiv(i->y << shift, i->z << shift);
 
     scr->x = (i->x + TO_FP(1)) * 120;
     scr->y = (i->y + TO_FP(1)) * 80;
